@@ -1,8 +1,9 @@
 window.DevSupabase = (() => {
   const { DevConfig, DevSession } = window;
+  const URL_TOKEN_HANDOFF_KEY = "catrion.devpanel.urltokens";
 
   if (!window.supabase) {
-    console.error('Supabase CDN não carregou.');
+    console.error("Supabase CDN não carregou.");
     return {
       client: null,
       authReady: Promise.resolve(false)
@@ -21,31 +22,54 @@ window.DevSupabase = (() => {
     }
   );
 
-  function getTokensFromUrl() {
-    const params = new URLSearchParams(window.location.search);
-
-    const access_token = params.get('access_token');
-    const refresh_token = params.get('refresh_token');
-
-    if (access_token && refresh_token) {
-      return { access_token, refresh_token };
-    }
-
-    return null;
-  }
-
   function stripAuthTokensFromUrl() {
     const url = new URL(window.location.href);
 
-    url.searchParams.delete('access_token');
-    url.searchParams.delete('refresh_token');
+    url.searchParams.delete("access_token");
+    url.searchParams.delete("refresh_token");
 
     const next =
       url.pathname +
-      (url.searchParams.toString() ? `?${url.searchParams.toString()}` : '') +
-      (url.hash || '');
+      (url.searchParams.toString() ? `?${url.searchParams.toString()}` : "") +
+      (url.hash || "");
 
     window.history.replaceState({}, document.title, next);
+  }
+
+  function stashTokensFromUrlIfPresent() {
+    const params = new URLSearchParams(window.location.search);
+
+    const access_token = params.get("access_token");
+    const refresh_token = params.get("refresh_token");
+
+    if (!access_token || !refresh_token) {
+      return;
+    }
+
+    sessionStorage.setItem(
+      URL_TOKEN_HANDOFF_KEY,
+      JSON.stringify({ access_token, refresh_token })
+    );
+
+    stripAuthTokensFromUrl();
+  }
+
+  function consumeStashedUrlTokens() {
+    const raw = sessionStorage.getItem(URL_TOKEN_HANDOFF_KEY);
+    if (!raw) return null;
+
+    sessionStorage.removeItem(URL_TOKEN_HANDOFF_KEY);
+
+    try {
+      const parsed = JSON.parse(raw);
+      if (parsed?.access_token && parsed?.refresh_token) {
+        return parsed;
+      }
+    } catch (error) {
+      console.warn("Falha ao interpretar tokens temporários da URL.", error);
+    }
+
+    return null;
   }
 
   async function hasCurrentClientSession() {
@@ -53,35 +77,37 @@ window.DevSupabase = (() => {
       const { data, error } = await client.auth.getSession();
 
       if (error) {
-        console.warn('Erro ao consultar sessão atual do client.', error);
+        console.warn("Erro ao consultar sessão atual do client.", error);
         return false;
       }
 
       return !!data?.session?.access_token;
     } catch (error) {
-      console.warn('Falha ao verificar sessão atual do client.', error);
+      console.warn("Falha ao verificar sessão atual do client.", error);
       return false;
     }
   }
 
-  async function applyTokensFromUrl(tokensFromUrl) {
+  async function applyTokens(tokens) {
+    if (!tokens?.access_token || !tokens?.refresh_token) {
+      return false;
+    }
+
     try {
       const { data, error } = await client.auth.setSession({
-        access_token: tokensFromUrl.access_token,
-        refresh_token: tokensFromUrl.refresh_token
+        access_token: tokens.access_token,
+        refresh_token: tokens.refresh_token
       });
 
       if (error) {
-        console.warn('Erro ao aplicar sessão vinda da URL', error);
+        console.warn("Erro ao aplicar sessão vinda do portal.", error);
         return false;
       }
 
       return !!data?.session?.access_token;
     } catch (error) {
-      console.warn('Falha ao aplicar sessão vinda da URL.', error);
+      console.warn("Falha ao aplicar sessão vinda do portal.", error);
       return false;
-    } finally {
-      stripAuthTokensFromUrl();
     }
   }
 
@@ -89,8 +115,8 @@ window.DevSupabase = (() => {
     try {
       const stored = DevSession?.getSession?.();
 
-      const accessToken = stored?.session?.access_token || '';
-      const refreshToken = stored?.session?.refresh_token || '';
+      const accessToken = stored?.session?.access_token || "";
+      const refreshToken = stored?.session?.refresh_token || "";
 
       if (!accessToken || !refreshToken) {
         return false;
@@ -108,29 +134,29 @@ window.DevSupabase = (() => {
       });
 
       if (error) {
-        console.warn('Não foi possível restaurar sessão do Supabase a partir da sessão salva.', error);
+        console.warn("Não foi possível restaurar sessão do Supabase a partir da sessão salva.", error);
         return false;
       }
 
       return !!data?.session?.access_token;
     } catch (error) {
-      console.warn('Falha ao restaurar sessão local do Dev Panel.', error);
+      console.warn("Falha ao restaurar sessão local do Dev Panel.", error);
       return false;
     }
   }
 
   async function bootstrapAuth() {
     try {
+      stashTokensFromUrlIfPresent();
+
       const alreadyAuthenticated = await hasCurrentClientSession();
       if (alreadyAuthenticated) {
-        stripAuthTokensFromUrl();
         return true;
       }
 
-      const tokensFromUrl = getTokensFromUrl();
-
-      if (tokensFromUrl) {
-        const applied = await applyTokensFromUrl(tokensFromUrl);
+      const handoffTokens = consumeStashedUrlTokens();
+      if (handoffTokens) {
+        const applied = await applyTokens(handoffTokens);
         if (applied) {
           return true;
         }
@@ -144,8 +170,9 @@ window.DevSupabase = (() => {
       const { data } = await client.auth.getSession();
       return !!data?.session?.access_token;
     } catch (error) {
-      console.warn('Falha ao iniciar sessão auth do Supabase.', error);
+      console.warn("Falha ao iniciar sessão auth do Supabase.", error);
       stripAuthTokensFromUrl();
+      sessionStorage.removeItem(URL_TOKEN_HANDOFF_KEY);
       return false;
     }
   }
@@ -157,7 +184,6 @@ window.DevSupabase = (() => {
       if (!session?.access_token || !session?.refresh_token) return;
 
       const stored = DevSession?.getSession?.();
-
       if (!stored) return;
 
       DevSession.persistSession({
@@ -168,7 +194,7 @@ window.DevSupabase = (() => {
         }
       });
     } catch (error) {
-      console.warn('Falha ao sincronizar sessão do Supabase com a sessão local.', error);
+      console.warn("Falha ao sincronizar sessão do Supabase com a sessão local.", error);
     }
   });
 
