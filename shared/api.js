@@ -31,6 +31,38 @@ window.DevAPI = (() => {
     return data.user;
   }
 
+    async function updateAuthUserPasswordViaFunction(authUserId, newPassword) {
+    ensureClient();
+
+    const normalizedAuthUserId = String(authUserId || '').trim();
+    const normalizedPassword = String(newPassword || '');
+
+    if (!normalizedAuthUserId) {
+      throw new Error('Usuário Auth não informado para alterar senha.');
+    }
+
+    if (!normalizedPassword || normalizedPassword.length < 6) {
+      throw new Error('A nova senha deve ter pelo menos 6 caracteres.');
+    }
+
+    const { data, error } = await client.functions.invoke('update-platform-user-password', {
+      body: {
+        authUserId: normalizedAuthUserId,
+        newPassword: normalizedPassword
+      }
+    });
+
+    if (error) {
+      throw error;
+    }
+
+    if (!data?.success) {
+      throw new Error(data?.error || 'Falha ao atualizar senha no Auth.');
+    }
+
+    return true;
+  }
+
   function mapTenant(base, contract, moduleRows) {
     const nome = base.trade_name || base.legal_name;
 
@@ -539,7 +571,7 @@ dueDay: Number(contract?.due_day || 1),
     ] = await Promise.all([
       client
         .from('dp_profiles')
-        .select('id, full_name, email, user_status, is_platform_admin, phone, avatar_url, created_at')
+        .select('id, auth_user_id, full_name, email, user_status, is_platform_admin, phone, avatar_url, created_at')
         .order('created_at', { ascending: true }),
 
       client
@@ -614,17 +646,18 @@ dueDay: Number(contract?.due_day || 1),
       const moduleCount = links.reduce((acc, item) => acc + item.modules.length, 0);
 
       return {
-        id: profile.id,
-        nome: profile.full_name || '',
-        email: profile.email || '',
-        phone: profile.phone || '',
-avatarUrl: profile.avatar_url || '',
-        status: profile.user_status || 'ativo',
-        isPlatformAdmin: profile.is_platform_admin === true,
-        tenantCount: links.length,
-        moduleCount,
-        memberships: links
-      };
+  id: profile.id,
+  authUserId: profile.auth_user_id || '',
+  nome: profile.full_name || '',
+  email: profile.email || '',
+  phone: profile.phone || '',
+  avatarUrl: profile.avatar_url || '',
+  status: profile.user_status || 'ativo',
+  isPlatformAdmin: profile.is_platform_admin === true,
+  tenantCount: links.length,
+  moduleCount,
+  memberships: links
+};
     });
   }
 
@@ -827,6 +860,126 @@ avatarUrl: profile.avatar_url || '',
     if (deleteMembershipError) throw deleteMembershipError;
 
     return true;
+  }
+
+    async function createUserMembershipLink(payload) {
+    ensureClient();
+
+    const {
+      userId,
+      tenantId,
+      roleKey,
+      moduleKey
+    } = payload || {};
+
+    if (!userId) {
+      throw new Error('Usuário não informado para vincular.');
+    }
+
+    if (!tenantId) {
+      throw new Error('Empresa não informada.');
+    }
+
+    if (!roleKey) {
+      throw new Error('Papel não informado.');
+    }
+
+    if (!moduleKey) {
+      throw new Error('Módulo não informado.');
+    }
+
+    const [profile, tenant, role, module] = await Promise.all([
+      client
+        .from('dp_profiles')
+        .select('id')
+        .eq('id', userId)
+        .maybeSingle(),
+
+      client
+        .from('dp_tenants')
+        .select('id, tenant_id')
+        .eq('tenant_id', tenantId)
+        .maybeSingle(),
+
+      client
+        .from('dp_roles')
+        .select('id, role_key')
+        .eq('role_key', roleKey)
+        .maybeSingle(),
+
+      client
+        .from('dp_modules')
+        .select('id, module_key')
+        .eq('module_key', moduleKey)
+        .maybeSingle()
+    ]);
+
+    if (profile.error) throw profile.error;
+    if (tenant.error) throw tenant.error;
+    if (role.error) throw role.error;
+    if (module.error) throw module.error;
+
+    if (!profile.data) {
+      throw new Error('Usuário não encontrado.');
+    }
+
+    if (!tenant.data) {
+      throw new Error('Empresa não encontrada.');
+    }
+
+    if (!role.data) {
+      throw new Error('Papel não encontrado.');
+    }
+
+    if (!module.data) {
+      throw new Error('Módulo não encontrado.');
+    }
+
+    const { data: existingMembership, error: existingMembershipError } = await client
+      .from('dp_memberships')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('tenant_id', tenant.data.id)
+      .maybeSingle();
+
+    if (existingMembershipError) throw existingMembershipError;
+
+    if (existingMembership?.id) {
+      throw new Error('Este usuário já possui vínculo com esta empresa.');
+    }
+
+    const { data: membership, error: membershipError } = await client
+      .from('dp_memberships')
+      .insert({
+        user_id: userId,
+        tenant_id: tenant.data.id,
+        role_id: role.data.id,
+        membership_status: 'ativo'
+      })
+      .select('id')
+      .single();
+
+    if (membershipError) throw membershipError;
+
+    const accessLevel =
+      roleKey === 'core_admin'
+        ? 'admin'
+        : roleKey === 'core_visualizador'
+          ? 'leitura'
+          : 'operacao';
+
+    const { error: membershipModuleError } = await client
+      .from('dp_membership_modules')
+      .insert({
+        membership_id: membership.id,
+        module_id: module.data.id,
+        access_level: accessLevel,
+        is_enabled: true
+      });
+
+    if (membershipModuleError) throw membershipModuleError;
+
+    return membership;
   }
 
     async function createGlobalUser(payload) {
@@ -1325,6 +1478,8 @@ avatarUrl: profile.avatar_url || '',
         deleteGlobalUser,
     updateUserMembershipStatus,
     updateUserMembershipRole,
+        createUserMembershipLink,
+    updateAuthUserPasswordViaFunction,
         uploadUserAvatar,
     deleteUserAvatarByUrl,
     deleteUserMembership,

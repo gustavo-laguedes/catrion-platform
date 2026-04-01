@@ -286,30 +286,98 @@
     `;
   }
 
+    function renderCreateMembershipModal(user, tenants, roles, modules) {
+    const coreRoles = (roles || []).filter((role) => {
+      const key = String(role.role_key || '').toLowerCase();
+      return key.startsWith('core_');
+    });
+
+    const coreModules = (modules || []).filter((module) => {
+      return String(module.module_key || '').toLowerCase() === 'core';
+    });
+
+    return `
+      <div class="modal-overlay hidden" id="modalNovoVinculoUsuario">
+        <div class="modal-card">
+          <div class="modal-head">
+            <div>
+              <h2 class="panel-title">Vincular empresa</h2>
+              <p class="panel-subtitle">Criar novo vínculo para ${user.nome || 'usuário'}</p>
+            </div>
+
+            <button class="modal-close" type="button" id="btnFecharModalNovoVinculoUsuario">✕</button>
+          </div>
+
+          <div class="panel-body">
+            <form id="formNovoVinculoUsuario" class="form-grid">
+              <div class="field field-full">
+                <label class="field-label">Empresa</label>
+                <select class="field-input field-select" name="tenantId" required>
+                  <option value="">Selecione</option>
+                  ${(tenants || []).map((tenant) => `
+                    <option value="${tenant.tenantId}">
+                      ${tenant.nome} (${tenant.tenantId})
+                    </option>
+                  `).join('')}
+                </select>
+              </div>
+
+              <div class="field">
+                <label class="field-label">Módulo</label>
+                <select class="field-input field-select" name="moduleKey" required>
+                  <option value="">Selecione</option>
+                  ${coreModules.map((module) => `
+                    <option value="${module.module_key}">${module.module_name}</option>
+                  `).join('')}
+                </select>
+              </div>
+
+              <div class="field">
+                <label class="field-label">Papel</label>
+                <select class="field-input field-select" name="roleKey" required>
+                  <option value="">Selecione</option>
+                  ${coreRoles.map((role) => `
+                    <option value="${role.role_key}">
+                      ${getFriendlyRoleLabel(role.role_key, role.role_name)}
+                    </option>
+                  `).join('')}
+                </select>
+              </div>
+
+              <div class="field-actions field-full">
+                <button class="btn-ghost" type="button" id="btnCancelarModalNovoVinculoUsuario">Cancelar</button>
+                <button class="btn-primary" type="submit">Salvar vínculo</button>
+              </div>
+
+              <div class="form-feedback field-full" id="feedbackNovoVinculoUsuario"></div>
+            </form>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
   function renderPage(user) {
     return `
       <section class="app-page">
         <header class="page-head">
-                    <div>
-            <div class="user-header-block">
-              <div class="user-avatar user-avatar-lg">
-                ${user.avatarUrl
-                  ? `<img src="${user.avatarUrl}" alt="avatar do usuário" />`
-                  : `<span>${(user.nome || 'U')[0]}</span>`
-                }
-              </div>
+  <div>
+    <div class="user-header-block">
+      <div class="user-avatar user-avatar-lg">
+        ${user.avatarUrl
+          ? `<img src="${user.avatarUrl}" alt="avatar do usuário" />`
+          : `<span>${(user.nome || 'U')[0]}</span>`
+        }
+      </div>
 
-              <div>
-                <h1 class="page-title">${user.nome || 'Usuário'}</h1>
-                <p class="page-subtitle">${user.email || '-'}</p>
-              </div>
-            </div>
-          </div>
-</div>
-            <p class="page-subtitle">${user.email || '-'}</p>
-          </div>
+      <div>
+        <h1 class="page-title">${user.nome || 'Usuário'}</h1>
+        <p class="page-subtitle">${user.email || '-'}</p>
+      </div>
+    </div>
+  </div>
 
-          <div class="page-actions">
+  <div class="page-actions">
             <button class="btn-ghost" type="button" id="btnVoltarUsuarios">Voltar</button>
             <button class="btn-danger" type="button" id="btnAbrirModalExcluirUsuarioDetalhe">Excluir usuário</button>
           </div>
@@ -386,17 +454,21 @@
         </section>
 
         <section class="panel">
-          <div class="panel-head">
-            <div>
-              <h2 class="panel-title">Empresas, vínculos e acessos</h2>
-              <p class="panel-subtitle">Resumo por empresa e módulo</p>
-            </div>
-          </div>
+  <div class="panel-head">
+    <div>
+      <h2 class="panel-title">Empresas, vínculos e acessos</h2>
+      <p class="panel-subtitle">Resumo por empresa e módulo</p>
+    </div>
 
-          <div class="panel-body list-body">
-            ${renderMemberships(user)}
-          </div>
-        </section>
+    <button class="btn-primary btn-sm" type="button" id="btnAbrirModalNovoVinculoUsuario">
+      + Vincular empresa
+    </button>
+  </div>
+
+  <div class="panel-body list-body">
+    ${renderMemberships(user)}
+  </div>
+</section>
 
         <div class="modal-overlay hidden" id="modalExcluirUsuarioDetalhe">
           <div class="modal-card">
@@ -424,8 +496,14 @@
             </div>
           </div>
         </div>
-            ${renderEditUserModal(user)}
-      ${renderEditMembershipRoleModal(user, window.DevState?.get('globalCoreRoles') || [])}
+           ${renderEditUserModal(user)}
+${renderEditMembershipRoleModal(user, window.DevState?.get('globalCoreRoles') || [])}
+${renderCreateMembershipModal(
+  user,
+  window.DevState?.get('globalTenants') || [],
+  window.DevState?.get('globalCoreRoles') || [],
+  window.DevState?.get('allModules') || []
+)}
       </section>
     `;
   }
@@ -607,11 +685,19 @@
     avatarUrl
   });
 
-  const newPassword = formData.get('newPassword');
+  const newPassword = String(formData.get('newPassword') || '').trim();
 
-  if (newPassword && newPassword.length >= 6) {
-    alert('Senha alterada (simulação - ligar com Supabase Auth depois)');
+if (newPassword) {
+  if (newPassword.length < 6) {
+    throw new Error('A nova senha deve ter pelo menos 6 caracteres.');
   }
+
+  if (!user.authUserId) {
+    throw new Error('Este usuário não possui auth_user_id vinculado.');
+  }
+
+  await DevAPI.updateAuthUserPasswordViaFunction(user.authUserId, newPassword);
+}
 
   feedbackEditUser.textContent = 'Usuário atualizado com sucesso.';
   feedbackEditUser.className = 'form-feedback success';
@@ -643,6 +729,63 @@
       modalEditRole.addEventListener('click', (event) => {
         if (event.target === modalEditRole) {
           closeModal('modalEditarPapelVinculo');
+        }
+      });
+    }
+
+        const btnOpenCreateMembership = document.getElementById('btnAbrirModalNovoVinculoUsuario');
+    const btnCloseCreateMembership = document.getElementById('btnFecharModalNovoVinculoUsuario');
+    const btnCancelCreateMembership = document.getElementById('btnCancelarModalNovoVinculoUsuario');
+    const modalCreateMembership = document.getElementById('modalNovoVinculoUsuario');
+    const formCreateMembership = document.getElementById('formNovoVinculoUsuario');
+    const feedbackCreateMembership = document.getElementById('feedbackNovoVinculoUsuario');
+
+    if (btnOpenCreateMembership) {
+      btnOpenCreateMembership.addEventListener('click', () => openModal('modalNovoVinculoUsuario'));
+    }
+
+    if (btnCloseCreateMembership) {
+      btnCloseCreateMembership.addEventListener('click', () => closeModal('modalNovoVinculoUsuario'));
+    }
+
+    if (btnCancelCreateMembership) {
+      btnCancelCreateMembership.addEventListener('click', () => closeModal('modalNovoVinculoUsuario'));
+    }
+
+    if (modalCreateMembership) {
+      modalCreateMembership.addEventListener('click', (event) => {
+        if (event.target === modalCreateMembership) {
+          closeModal('modalNovoVinculoUsuario');
+        }
+      });
+    }
+
+    if (formCreateMembership && feedbackCreateMembership) {
+      formCreateMembership.addEventListener('submit', async (event) => {
+        event.preventDefault();
+
+        feedbackCreateMembership.textContent = 'Salvando vínculo...';
+        feedbackCreateMembership.className = 'form-feedback pending';
+
+        const formData = new FormData(formCreateMembership);
+
+        try {
+          await DevAPI.createUserMembershipLink({
+            userId: user.id,
+            tenantId: formData.get('tenantId'),
+            roleKey: formData.get('roleKey'),
+            moduleKey: formData.get('moduleKey')
+          });
+
+          feedbackCreateMembership.textContent = 'Vínculo criado com sucesso.';
+          feedbackCreateMembership.className = 'form-feedback success';
+
+          closeModal('modalNovoVinculoUsuario');
+          hydrate(user.id);
+        } catch (error) {
+          console.error(error);
+          feedbackCreateMembership.textContent = error.message || 'Erro ao criar vínculo.';
+          feedbackCreateMembership.className = 'form-feedback error';
         }
       });
     }
@@ -731,10 +874,12 @@
     if (!mount) return;
 
     try {
-            const [user, coreRoles] = await Promise.all([
-        DevAPI.getGlobalUserById(userId),
-        DevAPI.getSystemRoles('core')
-      ]);
+            const [user, coreRoles, tenants, modules] = await Promise.all([
+  DevAPI.getGlobalUserById(userId),
+  DevAPI.getSystemRoles('core'),
+  DevAPI.getTenants(),
+  DevAPI.getModules()
+]);
 
       if (!user) {
         mount.innerHTML = `
@@ -749,7 +894,9 @@
       }
 
       DevState.set('userDetail', user);
-            DevState.set('globalCoreRoles', coreRoles || []);
+DevState.set('globalCoreRoles', coreRoles || []);
+DevState.set('globalTenants', tenants || []);
+DevState.set('allModules', modules || []);
       mount.innerHTML = renderPage(user);
       bindActions(user);
     } catch (error) {
