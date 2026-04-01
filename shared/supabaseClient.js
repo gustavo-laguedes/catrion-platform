@@ -22,38 +22,37 @@ window.DevSupabase = (() => {
   );
 
   function getTokensFromUrl() {
-  const params = new URLSearchParams(window.location.search);
+    const params = new URLSearchParams(window.location.search);
 
-  const access_token = params.get("access_token");
-  const refresh_token = params.get("refresh_token");
+    const access_token = params.get('access_token');
+    const refresh_token = params.get('refresh_token');
 
-  if (access_token && refresh_token) {
-    return { access_token, refresh_token };
-  }
-
-  return null;
-}
-
-  (async () => {
-  const tokens = getTokensFromUrl();
-
-  if (tokens) {
-    try {
-      await client.auth.setSession(tokens);
-
-      console.log("Tokens recebidos via URL:", tokens);
-
-      // limpa URL (remove tokens)
-      window.history.replaceState({}, document.title, window.location.pathname);
-    } catch (err) {
-      console.warn("Erro ao aplicar sessão vinda da URL", err);
+    if (access_token && refresh_token) {
+      return { access_token, refresh_token };
     }
+
+    return null;
   }
-})();
 
-
-  async function bootstrapAuthFromStoredSession() {
+  async function bootstrapAuth() {
     try {
+      const tokensFromUrl = getTokensFromUrl();
+
+      if (tokensFromUrl) {
+        const { data, error } = await client.auth.setSession(tokensFromUrl);
+
+        if (error) {
+          console.warn('Erro ao aplicar sessão vinda da URL', error);
+          return false;
+        }
+
+        console.log('Tokens recebidos via URL:', tokensFromUrl);
+
+        window.history.replaceState({}, document.title, window.location.pathname);
+
+        return !!data?.session?.access_token;
+      }
+
       const stored = DevSession?.getSession?.();
 
       const accessToken = stored?.session?.access_token || '';
@@ -87,7 +86,7 @@ window.DevSupabase = (() => {
     }
   }
 
-  const authReady = bootstrapAuthFromStoredSession();
+  const authReady = bootstrapAuth();
 
   client.auth.onAuthStateChange(async (_event, session) => {
     try {
