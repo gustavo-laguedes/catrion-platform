@@ -45,10 +45,28 @@ window.DevAPI = (() => {
       throw new Error('A nova senha deve ter pelo menos 6 caracteres.');
     }
 
+       const {
+      data: sessionData,
+      error: sessionError
+    } = await client.auth.getSession();
+
+    if (sessionError) {
+      throw sessionError;
+    }
+
+    const accessToken = sessionData?.session?.access_token || '';
+
+    if (!accessToken) {
+      throw new Error('Sessão autenticada não encontrada para chamar a Edge Function.');
+    }
+
     const { data, error } = await client.functions.invoke('update-platform-user-password', {
       body: {
         authUserId: normalizedAuthUserId,
         newPassword: normalizedPassword
+      },
+      headers: {
+        Authorization: `Bearer ${accessToken}`
       }
     });
 
