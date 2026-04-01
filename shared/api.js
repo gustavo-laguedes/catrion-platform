@@ -61,14 +61,15 @@ window.DevAPI = (() => {
     }
 
     const { data, error } = await client.functions.invoke('update-platform-user-password', {
-      body: {
-        authUserId: normalizedAuthUserId,
-        newPassword: normalizedPassword
-      },
-      headers: {
-        Authorization: `Bearer ${accessToken}`
-      }
-    });
+  body: {
+    authUserId: normalizedAuthUserId,
+    newPassword: normalizedPassword
+  },
+  headers: {
+    Authorization: `Bearer ${accessToken}`,
+    apikey: window.DevConfig.supabasePublishableKey
+  }
+});
 
     if (error) {
       throw error;
