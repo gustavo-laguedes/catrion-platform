@@ -190,21 +190,25 @@ window.DevAuth = (() => {
   }
 
   async function logout() {
-    const DevSupabase = getSupabase();
-    const DevSession = getSessionStore();
+  const DevSupabase = getSupabase();
+  const DevSession = getSessionStore();
 
-    sessionStorage.setItem("devpanel:logging_out", "true");
+  sessionStorage.setItem("devpanel:logging_out", "true");
 
-    try {
-      await DevSupabase?.client?.auth?.signOut();
-    } catch (error) {
-      console.warn("[DevAuth] Erro ao encerrar sessão do Supabase.", error);
-    }
-
-    DevSession.clearSession();
-
-    window.location.href = buildPortalRedirectUrl();
+  try {
+    await DevSupabase?.client?.auth?.signOut();
+  } catch (error) {
+    console.warn("[DevAuth] Erro ao encerrar sessão do Supabase.", error);
   }
+
+  DevSession.clearSession();
+
+  const DevConfig = getConfig();
+  const redirect = encodeURIComponent(window.location.origin + "/");
+  const portalLogoutUrl = `${DevConfig.portalLoginUrl}?logout=1&redirect=${redirect}`;
+
+  window.location.href = portalLogoutUrl;
+}
 
   return {
     requireAccess,
