@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Catrion Dev Panel</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="dev-shell">
+    <aside class="dev-sidebar">
+      <div class="sidebar-brand">
+        <div>
+          <div class="brand-mark">CATRION</div>
+          <div class="brand-sub">DEV PANEL</div>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav" id="sidebarNav">
+  <button class="sidebar-link active" type="button" data-route="dashboard">
+    <span class="sidebar-ico">🧠</span>
+    <span>Dashboard</span>
+  </button>
+
+  <button class="sidebar-link" type="button" data-route="empresas">
+    <span class="sidebar-ico">🏢</span>
+    <span>Empresas</span>
+  </button>
+
+  <button class="sidebar-link" type="button" data-route="usuarios">
+  <span class="sidebar-ico">👤</span>
+  <span>Usuários</span>
+</button>
+
+  <button class="sidebar-link" type="button" data-route="sistemas">
+    <span class="sidebar-ico">🧩</span>
+    <span>Sistemas</span>
+  </button>
+
+  <button class="sidebar-link" type="button" data-route="financeiro">
+    <span class="sidebar-ico">💳</span>
+    <span>Financeiro</span>
+  </button>
+</nav>
+
+      <div class="sidebar-secondary">
+        <button class="sidebar-link sidebar-link-secondary" type="button" data-route="configuracoes">
+          <span class="sidebar-ico">⚙️</span>
+          <span>Configurações</span>
+        </button>
+      </div>
+
+      <div class="sidebar-footer">
+        <div class="sidebar-footer-text">Painel mestre da plataforma</div>
+        <div class="sidebar-footer-chip">dev.catrion.com.br • v0.3</div>
+      </div>
+    </aside>
+
+    <div class="dev-main-area">
+      <header class="topbar">
+        <div class="topbar-left">
+          <button class="topbar-home-btn" id="btnGoDashboard" type="button">DEV PANEL</button>
+          <div class="topbar-context" id="topbarContext">Torre de controle da Catrion</div>
+        </div>
+
+        <div class="topbar-right">
+          <span class="topbar-chip" id="environmentChip">Ambiente: Supabase</span>
+          <span class="hello" id="helloUser">Olá, Admin</span>
+          <button class="topbar-icon" type="button" title="Alertas">🔔</button>
+          <div class="divider"></div>
+          <button class="topbar-icon" id="btnLogout" type="button" title="Sair">⏻</button>
+        </div>
+      </header>
+
+      <main id="app"></main>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<script src="shared/config.js"></script>
+<script src="shared/ui.js"></script>
+<script src="shared/session.js"></script>
+<script src="shared/dev-auth.js"></script>
+<script src="shared/supabaseClient.js"></script>
+<script src="shared/state.js"></script>
+<script src="shared/api.js"></script>
+<script src="shared/router.js"></script>
+
+<script src="pages/dashboard/dashboard.js"></script>
+<script src="pages/empresas/empresas.js"></script>
+<script src="pages/usuarios/usuarios.js"></script>
+<script src="pages/usuario/usuario.js"></script>
+<script src="pages/empresa/empresa.js"></script>
+<script src="pages/sistemas/sistemas.js"></script>
+<script src="pages/sistema-core/sistema-core.js"></script>
+<script src="pages/financeiro/financeiro.js"></script>
+<script src="pages/configuracoes/configuracoes.js"></script>
+
+<script src="pages/empresa-modulo/empresa-modulo.js"></script>
+
+<script src="app.js"></script>
+
+</body>
+</html>
