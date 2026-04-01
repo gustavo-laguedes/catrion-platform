@@ -23,7 +23,7 @@ window.DevAuth = (() => {
     return role === 'admin_catrion' && allowedModules.includes('devpanel');
   }
 
-    async function ensureSupabaseAuthSession() {
+  async function ensureSupabaseAuthSession() {
     const client = DevSupabase?.client;
     if (!client) return false;
 
@@ -45,12 +45,58 @@ window.DevAuth = (() => {
     return !!data?.session?.access_token;
   }
 
-   async function requireAccess() {
+  async function buildSessionFromSupabase() {
+    const client = DevSupabase?.client;
+    if (!client) return null;
+
+    try {
+      const [{ data: sessionData }, { data: userData }] = await Promise.all([
+        client.auth.getSession(),
+        client.auth.getUser()
+      ]);
+
+      const authSession = sessionData?.session;
+      const authUser = userData?.user;
+
+      if (!authSession || !authUser) {
+        return null;
+      }
+
+      const bootstrappedSession = {
+        user: {
+          id: authUser.id,
+          name:
+            authUser.user_metadata?.name ||
+            authUser.user_metadata?.full_name ||
+            authUser.email ||
+            'Usuário',
+          email: authUser.email || ''
+        },
+        session: {
+          access_token: authSession.access_token || '',
+          refresh_token: authSession.refresh_token || ''
+        },
+        context: {
+          active_tenant_id: 'catrion',
+          allowed_modules: ['devpanel'],
+          global_role: 'admin_catrion'
+        }
+      };
+
+      DevSession.persistSession(bootstrappedSession);
+      return bootstrappedSession;
+    } catch (error) {
+      console.warn('Erro ao montar sessão do Dev Panel a partir do Supabase.', error);
+      return null;
+    }
+  }
+
+  async function requireAccess() {
     const isLocalhost =
       window.location.hostname === 'localhost' ||
       window.location.hostname === '127.0.0.1';
 
-    const session = DevSession.getSession();
+    let session = DevSession.getSession();
 
     if (isLocalhost) {
       console.warn('Dev Panel em localhost: autenticação externa bloqueada temporariamente para desenvolvimento local.');
@@ -73,6 +119,12 @@ window.DevAuth = (() => {
       };
     }
 
+    const hasSupabaseSession = await ensureSupabaseAuthSession();
+
+    if (!session && hasSupabaseSession) {
+      session = await buildSessionFromSupabase();
+    }
+
     if (!isAuthenticated(session)) {
       window.location.href = buildPortalRedirectUrl();
       return null;
@@ -91,8 +143,6 @@ window.DevAuth = (() => {
       `;
       return null;
     }
-
-    const hasSupabaseSession = await ensureSupabaseAuthSession();
 
     if (!hasSupabaseSession) {
       window.location.href = buildPortalRedirectUrl();
