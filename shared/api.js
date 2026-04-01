@@ -7,15 +7,6 @@ window.DevAPI = (() => {
     }
   }
 
-    async function createAuthUserViaFunction(email) {
-    ensureClient();
-
-    const normalizedEmail = String(email || '').trim().toLowerCase();
-
-    if (!normalizedEmail) {
-      throw new Error('E-mail obrigatório para criar usuário no Auth.');
-    }
-
       async function createAuthUserViaFunction(email) {
     ensureClient();
 
@@ -59,7 +50,7 @@ window.DevAPI = (() => {
     return data.user;
   }
 
-    async function updateAuthUserPasswordViaFunction(authUserId, newPassword) {
+  async function updateAuthUserPasswordViaFunction(authUserId, newPassword) {
     ensureClient();
 
     const normalizedAuthUserId = String(authUserId || '').trim();
@@ -73,7 +64,7 @@ window.DevAPI = (() => {
       throw new Error('A nova senha deve ter pelo menos 6 caracteres.');
     }
 
-       const {
+    const {
       data: sessionData,
       error: sessionError
     } = await client.auth.getSession();
@@ -89,15 +80,15 @@ window.DevAPI = (() => {
     }
 
     const { data, error } = await client.functions.invoke('update-platform-user-password', {
-  body: {
-    authUserId: normalizedAuthUserId,
-    newPassword: normalizedPassword
-  },
-  headers: {
-    Authorization: `Bearer ${accessToken}`,
-    apikey: window.DevConfig.supabasePublishableKey
-  }
-});
+      body: {
+        authUserId: normalizedAuthUserId,
+        newPassword: normalizedPassword
+      },
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        apikey: window.DevConfig.supabasePublishableKey
+      }
+    });
 
     if (error) {
       throw error;
@@ -769,7 +760,7 @@ dueDay: Number(contract?.due_day || 1),
     return true;
   }
 
-      async function updateGlobalUser(payload) {
+       async function updateGlobalUser(payload) {
     ensureClient();
 
     const {
@@ -800,7 +791,6 @@ dueDay: Number(contract?.due_day || 1),
 
     return true;
   }
-    
     async function updateUserMembershipStatus(membershipId, nextStatus) {
     ensureClient();
 
