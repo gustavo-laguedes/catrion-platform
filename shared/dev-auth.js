@@ -215,9 +215,9 @@ window.DevAuth = (() => {
 
     const hasSupabaseSession = await ensureSupabaseAuthSession();
 
-    if (!session && hasSupabaseSession) {
-      session = await buildSessionFromSupabase();
-    }
+if (hasSupabaseSession) {
+  session = await buildSessionFromSupabase();
+}
 
     if (!isAuthenticated(session)) {
       window.location.href = buildPortalRedirectUrl();
