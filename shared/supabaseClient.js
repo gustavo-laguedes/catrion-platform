@@ -16,7 +16,7 @@ window.DevSupabase = (() => {
       auth: {
         persistSession: true,
         autoRefreshToken: true,
-        detectSessionInUrl: true
+        detectSessionInUrl: false
       }
     }
   );
@@ -34,33 +34,66 @@ window.DevSupabase = (() => {
     return null;
   }
 
-  async function bootstrapAuth() {
+  function stripAuthTokensFromUrl() {
+    const url = new URL(window.location.href);
+
+    url.searchParams.delete('access_token');
+    url.searchParams.delete('refresh_token');
+
+    const next =
+      url.pathname +
+      (url.searchParams.toString() ? `?${url.searchParams.toString()}` : '') +
+      (url.hash || '');
+
+    window.history.replaceState({}, document.title, next);
+  }
+
+  async function hasCurrentClientSession() {
     try {
-      const tokensFromUrl = getTokensFromUrl();
+      const { data, error } = await client.auth.getSession();
 
-      if (tokensFromUrl) {
-        const { data, error } = await client.auth.setSession(tokensFromUrl);
-
-        if (error) {
-          console.warn('Erro ao aplicar sessão vinda da URL', error);
-          return false;
-        }
-
-        console.log('Tokens recebidos via URL:', tokensFromUrl);
-
-        window.history.replaceState({}, document.title, window.location.pathname);
-
-        return !!data?.session?.access_token;
+      if (error) {
+        console.warn('Erro ao consultar sessão atual do client.', error);
+        return false;
       }
 
+      return !!data?.session?.access_token;
+    } catch (error) {
+      console.warn('Falha ao verificar sessão atual do client.', error);
+      return false;
+    }
+  }
+
+  async function applyTokensFromUrl(tokensFromUrl) {
+    try {
+      const { data, error } = await client.auth.setSession({
+        access_token: tokensFromUrl.access_token,
+        refresh_token: tokensFromUrl.refresh_token
+      });
+
+      if (error) {
+        console.warn('Erro ao aplicar sessão vinda da URL', error);
+        return false;
+      }
+
+      return !!data?.session?.access_token;
+    } catch (error) {
+      console.warn('Falha ao aplicar sessão vinda da URL.', error);
+      return false;
+    } finally {
+      stripAuthTokensFromUrl();
+    }
+  }
+
+  async function restoreFromLocalDevSession() {
+    try {
       const stored = DevSession?.getSession?.();
 
       const accessToken = stored?.session?.access_token || '';
       const refreshToken = stored?.session?.refresh_token || '';
 
       if (!accessToken || !refreshToken) {
-        const { data } = await client.auth.getSession();
-        return !!data?.session?.access_token;
+        return false;
       }
 
       const { data: currentSession } = await client.auth.getSession();
@@ -81,7 +114,38 @@ window.DevSupabase = (() => {
 
       return !!data?.session?.access_token;
     } catch (error) {
+      console.warn('Falha ao restaurar sessão local do Dev Panel.', error);
+      return false;
+    }
+  }
+
+  async function bootstrapAuth() {
+    try {
+      const alreadyAuthenticated = await hasCurrentClientSession();
+      if (alreadyAuthenticated) {
+        stripAuthTokensFromUrl();
+        return true;
+      }
+
+      const tokensFromUrl = getTokensFromUrl();
+
+      if (tokensFromUrl) {
+        const applied = await applyTokensFromUrl(tokensFromUrl);
+        if (applied) {
+          return true;
+        }
+      }
+
+      const restored = await restoreFromLocalDevSession();
+      if (restored) {
+        return true;
+      }
+
+      const { data } = await client.auth.getSession();
+      return !!data?.session?.access_token;
+    } catch (error) {
       console.warn('Falha ao iniciar sessão auth do Supabase.', error);
+      stripAuthTokensFromUrl();
       return false;
     }
   }
