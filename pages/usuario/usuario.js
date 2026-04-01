@@ -116,16 +116,15 @@
               </div>
 
               <div class="field">
-                <label class="field-label">E-mail</label>
-                <input
-  class="field-input"
-  name="email"
-  type="email"
-  value="${user.email || ''}"
-  readonly
-/>
-      <div class="file-help">O e-mail está protegido por enquanto para evitar desencontro com o Supabase Auth.</div>
-              </div>
+  <label class="field-label">E-mail</label>
+  <input
+    class="field-input"
+    name="email"
+    type="email"
+    value="${user.email || ''}"
+    required
+  />
+</div>
 
               <div class="field">
                 <label class="field-label">Telefone</label>
@@ -150,11 +149,10 @@
   <label class="field-label">Senha atual</label>
   <input
     class="field-input"
-    type="text"
-    value="Não exibível"
+    type="password"
+    value="********"
     readonly
   />
-  <div class="file-help">Por segurança, a senha atual não pode ser consultada. Ela só pode ser substituída.</div>
 </div>
 
               <div class="field">
@@ -677,25 +675,39 @@ ${renderCreateMembershipModal(
     avatarUrl = await DevAPI.uploadUserAvatar(user.id, avatarFile);
   }
 
-  await DevAPI.updateGlobalUser({
-    userId: user.id,
-    fullName: formData.get('fullName'),
-    email: formData.get('email'),
-    status: formData.get('status'),
-    isPlatformAdmin: formData.get('isPlatformAdmin') === 'true',
-    phone: formData.get('phone'),
-    avatarUrl
-  });
+  const nextEmail = String(formData.get('email') || '').trim().toLowerCase();
+const currentEmail = String(user.email || '').trim().toLowerCase();
 
-  const newPassword = String(formData.get('newPassword') || '').trim();
+if (!nextEmail) {
+  throw new Error('E-mail obrigatório.');
+}
+
+if (!user.authUserId) {
+  throw new Error('Este usuário não possui auth_user_id vinculado.');
+}
+
+if (nextEmail !== currentEmail) {
+  await DevAPI.updateAuthUserEmailViaFunction({
+    profileId: user.id,
+    authUserId: user.authUserId,
+    newEmail: nextEmail
+  });
+}
+
+await DevAPI.updateGlobalUser({
+  userId: user.id,
+  fullName: formData.get('fullName'),
+  status: formData.get('status'),
+  isPlatformAdmin: formData.get('isPlatformAdmin') === 'true',
+  phone: formData.get('phone'),
+  avatarUrl
+});
+
+const newPassword = String(formData.get('newPassword') || '').trim();
 
 if (newPassword) {
   if (newPassword.length < 6) {
     throw new Error('A nova senha deve ter pelo menos 6 caracteres.');
-  }
-
-  if (!user.authUserId) {
-    throw new Error('Este usuário não possui auth_user_id vinculado.');
   }
 
   await DevAPI.updateAuthUserPasswordViaFunction(user.authUserId, newPassword);

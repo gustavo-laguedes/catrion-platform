@@ -101,6 +101,63 @@ window.DevAPI = (() => {
     return true;
   }
 
+    async function updateAuthUserEmailViaFunction(payload) {
+    ensureClient();
+
+    const profileId = String(payload?.profileId || '').trim();
+    const authUserId = String(payload?.authUserId || '').trim();
+    const newEmail = String(payload?.newEmail || '').trim().toLowerCase();
+
+    if (!profileId) {
+      throw new Error('Perfil não informado para alterar e-mail.');
+    }
+
+    if (!authUserId) {
+      throw new Error('Usuário Auth não informado para alterar e-mail.');
+    }
+
+    if (!newEmail) {
+      throw new Error('Novo e-mail obrigatório.');
+    }
+
+    const {
+      data: sessionData,
+      error: sessionError
+    } = await client.auth.getSession();
+
+    if (sessionError) {
+      throw sessionError;
+    }
+
+    const accessToken = sessionData?.session?.access_token || '';
+
+    if (!accessToken) {
+      throw new Error('Sessão autenticada não encontrada para chamar a Edge Function.');
+    }
+
+    const { data, error } = await client.functions.invoke('update-platform-user-email', {
+      body: {
+        profileId,
+        authUserId,
+        newEmail
+      },
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        apikey: window.DevConfig.supabasePublishableKey
+      }
+    });
+
+    if (error) {
+      throw error;
+    }
+
+    if (!data?.success) {
+      throw new Error(data?.error || 'Falha ao atualizar e-mail no Auth.');
+    }
+
+    return true;
+  }
+
   function mapTenant(base, contract, moduleRows) {
     const nome = base.trade_name || base.legal_name;
 
@@ -1496,6 +1553,7 @@ dueDay: Number(contract?.due_day || 1),
     updateUserMembershipRole,
         createUserMembershipLink,
     updateAuthUserPasswordViaFunction,
+    updateAuthUserEmailViaFunction,
         uploadUserAvatar,
     deleteUserAvatarByUrl,
     deleteUserMembership,

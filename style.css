@@ -1811,3 +1811,111 @@ body{min-height:100vh;background:
     justify-content:center;
   }
 }
+
+.modal-card-user-edit{
+  width:min(100%, 980px);
+}
+
+.modal-card-user-edit .panel-body{
+  padding:22px;
+}
+
+.modal-card-user-edit .form-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:18px 18px;
+  align-items:start;
+}
+
+.modal-card-user-edit .field{
+  display:grid;
+  gap:8px;
+  align-content:start;
+}
+
+.modal-card-user-edit .field-input,
+.modal-card-user-edit .field-select{
+  min-height:52px;
+}
+
+.modal-card-user-edit .field-input[readonly]{
+  opacity:1;
+}
+
+.modal-card-user-edit .user-avatar-upload-row{
+  display:grid;
+  grid-template-columns:96px minmax(0,1fr);
+  gap:16px;
+  align-items:center;
+}
+
+.modal-card-user-edit .user-avatar-preview{
+  width:96px;
+  height:96px;
+  border-radius:22px;
+}
+
+.modal-card-user-edit .user-avatar-upload-box{
+  display:grid;
+  gap:10px;
+  min-width:0;
+}
+
+.modal-card-user-edit .user-avatar-upload-actions{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  gap:12px;
+  align-items:center;
+}
+
+.modal-card-user-edit .file-upload-shell{
+  min-height:56px;
+}
+
+.modal-card-user-edit .field-actions{
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  gap:12px;
+  margin-top:4px;
+}
+
+.modal-card-user-edit .btn-primary,
+.modal-card-user-edit .btn-ghost{
+  min-width:160px;
+}
+
+@media (max-width: 900px){
+  .modal-card-user-edit .form-grid{
+    grid-template-columns:1fr;
+  }
+
+  .modal-card-user-edit .user-avatar-upload-row{
+    grid-template-columns:1fr;
+  }
+
+  .modal-card-user-edit .user-avatar-preview{
+    width:80px;
+    height:80px;
+    border-radius:18px;
+  }
+
+  .modal-card-user-edit .user-avatar-upload-actions{
+    grid-template-columns:1fr;
+  }
+
+  .modal-card-user-edit .user-avatar-upload-actions .btn-danger{
+    width:100%;
+    justify-content:center;
+  }
+
+  .modal-card-user-edit .field-actions{
+    flex-direction:column;
+    align-items:stretch;
+  }
+
+  .modal-card-user-edit .btn-primary,
+  .modal-card-user-edit .btn-ghost{
+    width:100%;
+  }
+}
