@@ -122,24 +122,36 @@ window.DevAuth = (() => {
 
     let session = DevSession.getSession();
 
+    const isLoggingOut = sessionStorage.getItem("devpanel:logging_out") === "true";
+    const urlParams = new URLSearchParams(window.location.search);
+    const hasIncomingTokens =
+      urlParams.has("access_token") || urlParams.has("refresh_token");
+
+    if (isLoggingOut && !session && !hasIncomingTokens) {
+      console.warn("[DevAuth] Logout em andamento, bloqueando revalidação.");
+      return null;
+    }
+
     if (isLocalhost) {
       console.warn("Dev Panel em localhost: bypass local ativo.");
-      return session || {
-        user: {
-          id: "debug-local",
-          name: "Admin Local",
-          email: "debug@local"
-        },
-        session: {
-          access_token: "",
-          refresh_token: ""
-        },
-        context: {
-          active_tenant_id: "catrion",
-          allowed_modules: ["devpanel"],
-          global_role: "admin_catrion"
+      return (
+        session || {
+          user: {
+            id: "debug-local",
+            name: "Admin Local",
+            email: "debug@local"
+          },
+          session: {
+            access_token: "",
+            refresh_token: ""
+          },
+          context: {
+            active_tenant_id: "catrion",
+            allowed_modules: ["devpanel"],
+            global_role: "admin_catrion"
+          }
         }
-      };
+      );
     }
 
     const hasSupabaseSession = await ensureSupabaseAuthSession();
@@ -172,12 +184,16 @@ window.DevAuth = (() => {
       return null;
     }
 
+    sessionStorage.removeItem("devpanel:logging_out");
+
     return session;
   }
 
   async function logout() {
     const DevSupabase = getSupabase();
     const DevSession = getSessionStore();
+
+    sessionStorage.setItem("devpanel:logging_out", "true");
 
     try {
       await DevSupabase?.client?.auth?.signOut();
@@ -186,6 +202,7 @@ window.DevAuth = (() => {
     }
 
     DevSession.clearSession();
+
     window.location.href = buildPortalRedirectUrl();
   }
 
