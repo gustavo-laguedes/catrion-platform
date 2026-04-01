@@ -16,7 +16,7 @@ window.DevAPI = (() => {
       throw new Error('E-mail obrigatório para criar usuário no Auth.');
     }
 
-     async function createAuthUserViaFunction(email) {
+      async function createAuthUserViaFunction(email) {
     ensureClient();
 
     const normalizedEmail = String(email || '').trim().toLowerCase();
@@ -47,17 +47,6 @@ window.DevAPI = (() => {
         apikey: window.DevConfig.supabasePublishableKey
       }
     });
-
-    if (error) {
-      throw error;
-    }
-
-    if (!data?.user?.id) {
-      throw new Error('Falha ao criar usuário no Auth.');
-    }
-
-    return data.user;
-  }
 
     if (error) {
       throw error;
@@ -780,57 +769,38 @@ dueDay: Number(contract?.due_day || 1),
     return true;
   }
 
-    async function updateGlobalUser(payload) {
+      async function updateGlobalUser(payload) {
     ensureClient();
 
     const {
-  userId,
-  fullName,
-  status,
-  isPlatformAdmin,
-  phone,
-  avatarUrl
-} = payload;
+      userId,
+      fullName,
+      status,
+      isPlatformAdmin,
+      phone,
+      avatarUrl
+    } = payload;
 
     if (!userId) {
       throw new Error('Usuário não informado para edição.');
     }
 
-    const normalizedEmail = String(email || '').trim().toLowerCase();
-
-    if (!normalizedEmail) {
-      throw new Error('E-mail obrigatório.');
-    }
-
-    const { data: existingProfile, error: lookupError } = await client
-      .from('dp_profiles')
-      .select('id, email')
-      .eq('email', normalizedEmail)
-      .neq('id', userId)
-      .maybeSingle();
-
-    if (lookupError) throw lookupError;
-
-    if (existingProfile) {
-      throw new Error('Já existe outro usuário com este e-mail.');
-    }
-
     const { error } = await client
       .from('dp_profiles')
       .update({
-  full_name: fullName || 'Usuário',
-  user_status: status || 'ativo',
-  is_platform_admin: isPlatformAdmin === true,
-  phone: phone || '',
-  avatar_url: avatarUrl || ''
-})
+        full_name: fullName || 'Usuário',
+        user_status: status || 'ativo',
+        is_platform_admin: isPlatformAdmin === true,
+        phone: phone || '',
+        avatar_url: avatarUrl || ''
+      })
       .eq('id', userId);
 
     if (error) throw error;
 
     return true;
   }
-
+    
     async function updateUserMembershipStatus(membershipId, nextStatus) {
     ensureClient();
 

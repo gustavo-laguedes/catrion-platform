@@ -151,19 +151,20 @@
   <input
     class="field-input"
     type="text"
-    value="Protegida"
-    disabled
+    value="Não exibível"
+    readonly
   />
+  <div class="file-help">Por segurança, a senha atual não pode ser consultada. Ela só pode ser substituída.</div>
 </div>
 
               <div class="field">
                 <label class="field-label">Nova senha</label>
                 <input
-                  class="field-input"
-                  type="password"
-                  name="newPassword"
-                  placeholder="Digite para alterar"
-                />
+  class="field-input"
+  type="text"
+  name="newPassword"
+  placeholder="Digite para alterar"
+/>
               </div>
 
               <div class="field">
