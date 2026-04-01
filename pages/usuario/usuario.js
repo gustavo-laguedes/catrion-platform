@@ -118,12 +118,13 @@
               <div class="field">
                 <label class="field-label">E-mail</label>
                 <input
-                  class="field-input"
-                  name="email"
-                  type="email"
-                  value="${user.email || ''}"
-                  required
-                />
+  class="field-input"
+  name="email"
+  type="email"
+  value="${user.email || ''}"
+  readonly
+/>
+      <div class="file-help">O e-mail está protegido por enquanto para evitar desencontro com o Supabase Auth.</div>
               </div>
 
               <div class="field">
@@ -146,14 +147,14 @@
               </div>
 
               <div class="field">
-                <label class="field-label">Senha atual</label>
-                <input
-                  class="field-input"
-                  type="password"
-                  value="********"
-                  disabled
-                />
-              </div>
+  <label class="field-label">Senha atual</label>
+  <input
+    class="field-input"
+    type="text"
+    value="Protegida"
+    disabled
+  />
+</div>
 
               <div class="field">
                 <label class="field-label">Nova senha</label>

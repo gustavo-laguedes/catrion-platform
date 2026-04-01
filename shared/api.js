@@ -16,9 +16,48 @@ window.DevAPI = (() => {
       throw new Error('E-mail obrigatório para criar usuário no Auth.');
     }
 
+     async function createAuthUserViaFunction(email) {
+    ensureClient();
+
+    const normalizedEmail = String(email || '').trim().toLowerCase();
+
+    if (!normalizedEmail) {
+      throw new Error('E-mail obrigatório para criar usuário no Auth.');
+    }
+
+    const {
+      data: sessionData,
+      error: sessionError
+    } = await client.auth.getSession();
+
+    if (sessionError) {
+      throw sessionError;
+    }
+
+    const accessToken = sessionData?.session?.access_token || '';
+
+    if (!accessToken) {
+      throw new Error('Sessão autenticada não encontrada para criar usuário.');
+    }
+
     const { data, error } = await client.functions.invoke('create-platform-user', {
-      body: { email: normalizedEmail }
+      body: { email: normalizedEmail },
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        apikey: window.DevConfig.supabasePublishableKey
+      }
     });
+
+    if (error) {
+      throw error;
+    }
+
+    if (!data?.user?.id) {
+      throw new Error('Falha ao criar usuário no Auth.');
+    }
+
+    return data.user;
+  }
 
     if (error) {
       throw error;
@@ -747,7 +786,6 @@ dueDay: Number(contract?.due_day || 1),
     const {
   userId,
   fullName,
-  email,
   status,
   isPlatformAdmin,
   phone,
@@ -781,7 +819,6 @@ dueDay: Number(contract?.due_day || 1),
       .from('dp_profiles')
       .update({
   full_name: fullName || 'Usuário',
-  email: normalizedEmail,
   user_status: status || 'ativo',
   is_platform_admin: isPlatformAdmin === true,
   phone: phone || '',
