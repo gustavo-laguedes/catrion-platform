@@ -1,5 +1,15 @@
 window.DevAuth = (() => {
-  const { DevConfig, DevSession, DevSupabase } = window;
+  function getConfig() {
+    return window.DevConfig;
+  }
+
+  function getSessionStore() {
+    return window.DevSession;
+  }
+
+  function getSupabase() {
+    return window.DevSupabase;
+  }
 
   function getRedirectTarget() {
     const current = window.location.href;
@@ -7,6 +17,7 @@ window.DevAuth = (() => {
   }
 
   function buildPortalRedirectUrl() {
+    const DevConfig = getConfig();
     return `${DevConfig.portalLoginUrl}?redirect=${getRedirectTarget()}`;
   }
 
@@ -20,25 +31,30 @@ window.DevAuth = (() => {
     const role = session.context.global_role;
     const allowedModules = session.context.allowed_modules || [];
 
-    return role === 'admin_catrion' && allowedModules.includes('devpanel');
+    return role === "admin_catrion" && allowedModules.includes("devpanel");
   }
 
   async function ensureSupabaseAuthSession() {
+    const DevSupabase = getSupabase();
     const client = DevSupabase?.client;
-    if (!client) return false;
+
+    if (!client) {
+      console.warn("[DevAuth] DevSupabase.client indisponível.");
+      return false;
+    }
 
     try {
       if (DevSupabase?.authReady) {
         await DevSupabase.authReady;
       }
     } catch (error) {
-      console.warn('Erro aguardando bootstrap da sessão auth.', error);
+      console.warn("[DevAuth] Erro aguardando authReady.", error);
     }
 
     const { data, error } = await client.auth.getSession();
 
     if (error) {
-      console.warn('Erro ao consultar sessão do Supabase Auth.', error);
+      console.warn("[DevAuth] Erro ao consultar sessão do Supabase Auth.", error);
       return false;
     }
 
@@ -46,8 +62,14 @@ window.DevAuth = (() => {
   }
 
   async function buildSessionFromSupabase() {
+    const DevSupabase = getSupabase();
+    const DevSession = getSessionStore();
     const client = DevSupabase?.client;
-    if (!client) return null;
+
+    if (!client) {
+      console.warn("[DevAuth] Não foi possível montar sessão: client indisponível.");
+      return null;
+    }
 
     try {
       const [{ data: sessionData }, { data: userData }] = await Promise.all([
@@ -69,52 +91,53 @@ window.DevAuth = (() => {
             authUser.user_metadata?.name ||
             authUser.user_metadata?.full_name ||
             authUser.email ||
-            'Usuário',
-          email: authUser.email || ''
+            "Usuário",
+          email: authUser.email || ""
         },
         session: {
-          access_token: authSession.access_token || '',
-          refresh_token: authSession.refresh_token || ''
+          access_token: authSession.access_token || "",
+          refresh_token: authSession.refresh_token || ""
         },
         context: {
-          active_tenant_id: 'catrion',
-          allowed_modules: ['devpanel'],
-          global_role: 'admin_catrion'
+          active_tenant_id: "catrion",
+          allowed_modules: ["devpanel"],
+          global_role: "admin_catrion"
         }
       };
 
       DevSession.persistSession(bootstrappedSession);
       return bootstrappedSession;
     } catch (error) {
-      console.warn('Erro ao montar sessão do Dev Panel a partir do Supabase.', error);
+      console.warn("[DevAuth] Erro ao montar sessão a partir do Supabase.", error);
       return null;
     }
   }
 
   async function requireAccess() {
+    const DevSession = getSessionStore();
+
     const isLocalhost =
-      window.location.hostname === 'localhost' ||
-      window.location.hostname === '127.0.0.1';
+      window.location.hostname === "localhost" ||
+      window.location.hostname === "127.0.0.1";
 
     let session = DevSession.getSession();
 
     if (isLocalhost) {
-      console.warn('Dev Panel em localhost: autenticação externa bloqueada temporariamente para desenvolvimento local.');
-
+      console.warn("Dev Panel em localhost: bypass local ativo.");
       return session || {
         user: {
-          id: 'debug-local',
-          name: 'Admin Local',
-          email: 'debug@local'
+          id: "debug-local",
+          name: "Admin Local",
+          email: "debug@local"
         },
         session: {
-          access_token: '',
-          refresh_token: ''
+          access_token: "",
+          refresh_token: ""
         },
         context: {
-          active_tenant_id: 'catrion',
-          allowed_modules: ['devpanel'],
-          global_role: 'admin_catrion'
+          active_tenant_id: "catrion",
+          allowed_modules: ["devpanel"],
+          global_role: "admin_catrion"
         }
       };
     }
@@ -131,7 +154,7 @@ window.DevAuth = (() => {
     }
 
     if (!hasDevPanelAccess(session)) {
-      document.getElementById('app').innerHTML = `
+      document.getElementById("app").innerHTML = `
         <section class="app-page">
           <div class="empty-card">
             <div class="empty-title">Acesso negado</div>
@@ -153,10 +176,13 @@ window.DevAuth = (() => {
   }
 
   async function logout() {
+    const DevSupabase = getSupabase();
+    const DevSession = getSessionStore();
+
     try {
       await DevSupabase?.client?.auth?.signOut();
     } catch (error) {
-      console.warn('Erro ao encerrar sessão do Supabase.', error);
+      console.warn("[DevAuth] Erro ao encerrar sessão do Supabase.", error);
     }
 
     DevSession.clearSession();
