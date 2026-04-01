@@ -21,6 +21,37 @@ window.DevSupabase = (() => {
     }
   );
 
+  function getTokensFromUrl() {
+  const params = new URLSearchParams(window.location.search);
+
+  const access_token = params.get("access_token");
+  const refresh_token = params.get("refresh_token");
+
+  if (access_token && refresh_token) {
+    return { access_token, refresh_token };
+  }
+
+  return null;
+}
+
+  (async () => {
+  const tokens = getTokensFromUrl();
+
+  if (tokens) {
+    try {
+      await client.auth.setSession(tokens);
+
+      console.log("Tokens recebidos via URL:", tokens);
+
+      // limpa URL (remove tokens)
+      window.history.replaceState({}, document.title, window.location.pathname);
+    } catch (err) {
+      console.warn("Erro ao aplicar sessão vinda da URL", err);
+    }
+  }
+})();
+
+
   async function bootstrapAuthFromStoredSession() {
     try {
       const stored = DevSession?.getSession?.();
