@@ -30,8 +30,15 @@ window.DevAuth = (() => {
 
     const role = session.context.global_role;
     const allowedModules = session.context.allowed_modules || [];
+    const isPlatformAdmin = session.context.is_platform_admin === true;
+    const userStatus = String(session.context.user_status || "").toLowerCase();
 
-    return role === "admin_catrion" && allowedModules.includes("devpanel");
+    return (
+      isPlatformAdmin === true &&
+      userStatus === "ativo" &&
+      role === "admin_catrion" &&
+      allowedModules.includes("devpanel")
+    );
   }
 
   async function ensureSupabaseAuthSession() {
@@ -61,6 +68,37 @@ window.DevAuth = (() => {
     return !!data?.session?.access_token;
   }
 
+  async function getProfileFromAuthUserId(authUserId) {
+    const DevSupabase = getSupabase();
+    const client = DevSupabase?.client;
+
+    if (!client || !authUserId) {
+      return null;
+    }
+
+    const { data, error } = await client
+      .from("dp_profiles")
+      .select(`
+        id,
+        full_name,
+        email,
+        user_status,
+        is_platform_admin,
+        phone,
+        avatar_url,
+        auth_user_id
+      `)
+      .eq("auth_user_id", authUserId)
+      .maybeSingle();
+
+    if (error) {
+      console.warn("[DevAuth] Erro ao buscar dp_profiles.", error);
+      return null;
+    }
+
+    return data || null;
+  }
+
   async function buildSessionFromSupabase() {
     const DevSupabase = getSupabase();
     const DevSession = getSessionStore();
@@ -84,15 +122,29 @@ window.DevAuth = (() => {
         return null;
       }
 
+      const profile = await getProfileFromAuthUserId(authUser.id);
+
+      if (!profile) {
+        console.warn("[DevAuth] Perfil não encontrado em dp_profiles para este auth_user_id.");
+        return null;
+      }
+
+      const normalizedStatus = String(profile.user_status || "").toLowerCase();
+      const isPlatformAdmin = profile.is_platform_admin === true;
+
       const bootstrappedSession = {
         user: {
-          id: authUser.id,
+          id: profile.id,
+          authUserId: authUser.id,
           name:
+            profile.full_name ||
             authUser.user_metadata?.name ||
             authUser.user_metadata?.full_name ||
             authUser.email ||
             "Usuário",
-          email: authUser.email || ""
+          email: profile.email || authUser.email || "",
+          phone: profile.phone || "",
+          avatarUrl: profile.avatar_url || ""
         },
         session: {
           access_token: authSession.access_token || "",
@@ -100,8 +152,10 @@ window.DevAuth = (() => {
         },
         context: {
           active_tenant_id: "catrion",
-          allowed_modules: ["devpanel"],
-          global_role: "admin_catrion"
+          allowed_modules: isPlatformAdmin ? ["devpanel"] : [],
+          global_role: isPlatformAdmin ? "admin_catrion" : "user",
+          is_platform_admin: isPlatformAdmin,
+          user_status: normalizedStatus
         }
       };
 
@@ -138,8 +192,11 @@ window.DevAuth = (() => {
         session || {
           user: {
             id: "debug-local",
+            authUserId: "debug-local-auth",
             name: "Admin Local",
-            email: "debug@local"
+            email: "debug@local",
+            phone: "",
+            avatarUrl: ""
           },
           session: {
             access_token: "",
@@ -148,7 +205,9 @@ window.DevAuth = (() => {
           context: {
             active_tenant_id: "catrion",
             allowed_modules: ["devpanel"],
-            global_role: "admin_catrion"
+            global_role: "admin_catrion",
+            is_platform_admin: true,
+            user_status: "ativo"
           }
         }
       );
@@ -190,25 +249,25 @@ window.DevAuth = (() => {
   }
 
   async function logout() {
-  const DevSupabase = getSupabase();
-  const DevSession = getSessionStore();
+    const DevSupabase = getSupabase();
+    const DevSession = getSessionStore();
 
-  sessionStorage.setItem("devpanel:logging_out", "true");
+    sessionStorage.setItem("devpanel:logging_out", "true");
 
-  try {
-    await DevSupabase?.client?.auth?.signOut();
-  } catch (error) {
-    console.warn("[DevAuth] Erro ao encerrar sessão do Supabase.", error);
+    try {
+      await DevSupabase?.client?.auth?.signOut();
+    } catch (error) {
+      console.warn("[DevAuth] Erro ao encerrar sessão do Supabase.", error);
+    }
+
+    DevSession.clearSession();
+
+    const DevConfig = getConfig();
+    const redirect = encodeURIComponent(window.location.origin + "/");
+    const portalLogoutUrl = `${DevConfig.portalLoginUrl}?logout=1&redirect=${redirect}`;
+
+    window.location.href = portalLogoutUrl;
   }
-
-  DevSession.clearSession();
-
-  const DevConfig = getConfig();
-  const redirect = encodeURIComponent(window.location.origin + "/");
-  const portalLogoutUrl = `${DevConfig.portalLoginUrl}?logout=1&redirect=${redirect}`;
-
-  window.location.href = portalLogoutUrl;
-}
 
   return {
     requireAccess,
