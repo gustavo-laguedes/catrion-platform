@@ -158,54 +158,6 @@ window.DevAPI = (() => {
     return true;
   }
 
-    async function generateFirstAccessLink(email, redirectTo) {
-    ensureClient();
-
-    const normalizedEmail = String(email || '').trim().toLowerCase();
-    const normalizedRedirectTo = String(redirectTo || '').trim();
-
-    if (!normalizedEmail) {
-      throw new Error('E-mail obrigatório para gerar 1º acesso.');
-    }
-
-    if (!normalizedRedirectTo) {
-      throw new Error('redirectTo obrigatório para gerar 1º acesso.');
-    }
-
-    const {
-      data: sessionData,
-      error: sessionError
-    } = await client.auth.getSession();
-
-    if (sessionError) {
-      throw sessionError;
-    }
-
-    const accessToken = sessionData?.session?.access_token || '';
-
-    if (!accessToken) {
-      throw new Error('Sessão autenticada não encontrada para chamar a Edge Function.');
-    }
-
-    const { data, error } = await client.functions.invoke('generate-first-access-link', {
-      body: {
-        email: normalizedEmail,
-        redirectTo: normalizedRedirectTo
-      },
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        apikey: window.DevConfig.supabasePublishableKey
-      }
-    });
-
-    if (error) throw error;
-    if (!data?.success || !data?.actionLink) {
-      throw new Error(data?.error || 'Falha ao gerar link de 1º acesso.');
-    }
-
-    return data.actionLink;
-  }
-
   async function generatePasswordResetLink(email, redirectTo) {
     ensureClient();
 
@@ -1677,7 +1629,6 @@ async function restoreTenantData(tenantId, backup) {
         createUserMembershipLink,
     updateAuthUserPasswordViaFunction,
     updateAuthUserEmailViaFunction,
-        generateFirstAccessLink,
     generatePasswordResetLink,
         uploadUserAvatar,
     deleteUserAvatarByUrl,

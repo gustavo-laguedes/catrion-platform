@@ -441,11 +441,6 @@
               </div>
             </div>
 
-            <div class="panel-body action-stack">
-              <button class="btn-ghost action-wide" type="button" id="btnPrimeiroAcessoPlaceholder">
-                Enviar 1º acesso
-              </button>
-
               <button class="btn-ghost action-wide" type="button" id="btnResetSenhaPlaceholder">
                 Enviar troca de senha
               </button>
@@ -568,36 +563,11 @@ ${renderCreateMembershipModal(
 
      function bindActions(user) {
     const btnVoltar = document.getElementById('btnVoltarUsuarios');
-    const btnPrimeiro = document.getElementById('btnPrimeiroAcessoPlaceholder');
     const btnSenha = document.getElementById('btnResetSenhaPlaceholder');
 
     if (btnVoltar) {
       btnVoltar.addEventListener('click', () => {
         DevRouter.navigate('usuarios');
-      });
-    }
-
-        if (btnPrimeiro) {
-      btnPrimeiro.addEventListener('click', async () => {
-        try {
-          const email = String(user.email || '').trim().toLowerCase();
-          if (!email) {
-            throw new Error('Este usuário não possui e-mail cadastrado.');
-          }
-
-          const redirectTo = `${window.DevConfig.portalAppUrl}#/first-access`;
-          const actionLink = await DevAPI.generateFirstAccessLink(email, redirectTo);
-
-          try {
-            await navigator.clipboard.writeText(actionLink);
-            alert('Link de 1º acesso gerado e copiado para a área de transferência.');
-          } catch (_) {
-            prompt('Copie o link de 1º acesso abaixo:', actionLink);
-          }
-        } catch (error) {
-          console.error(error);
-          alert(error.message || 'Erro ao gerar link de 1º acesso.');
-        }
       });
     }
 
