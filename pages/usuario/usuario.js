@@ -580,7 +580,7 @@ ${renderCreateMembershipModal(
         throw new Error('Este usuário não possui e-mail cadastrado.');
       }
 
-      const redirectTo = `${window.DevConfig.portalAppUrl}#/reset`;
+      const redirectTo = `${window.DevConfig.portalAppUrl}`;
 
       await DevAPI.sendPasswordResetEmail(email, redirectTo);
 
