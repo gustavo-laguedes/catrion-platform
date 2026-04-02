@@ -26,7 +26,7 @@
     `;
   }
 
-  function getModuleMeta() {
+    function getModuleMeta() {
     return [
       {
         key: 'home',
@@ -40,7 +40,12 @@
         subtitle: 'Operação de vendas e atendimento',
         actions: [
           { key: 'aplicar_desconto', label: 'Aplicar desconto manual' },
-          { key: 'cancelar_venda', label: 'Cancelar venda' }
+          { key: 'cancelar_venda', label: 'Cancelar venda' },
+          { key: 'usar_cupom', label: 'Usar cupom salvo' },
+          { key: 'gerenciar_cupom', label: 'Criar, editar e excluir cupons' },
+          { key: 'editar_cliente', label: 'Selecionar, cadastrar e editar cliente' },
+          { key: 'excluir_cliente', label: 'Excluir cliente' },
+          { key: 'finalizar_venda', label: 'Montar pagamento e finalizar venda' }
         ]
       },
       {
@@ -51,8 +56,9 @@
           { key: 'criar_produto', label: 'Criar produto' },
           { key: 'editar_produto', label: 'Editar produto' },
           { key: 'excluir_produto', label: 'Excluir produto' },
-          { key: 'ajuste_estoque', label: 'Ajustar estoque manualmente' },
-          { key: 'ver_custo', label: 'Ver custo do produto' }
+          { key: 'movimentar_estoque', label: 'Movimentar estoque' },
+          { key: 'ver_custo', label: 'Ver custo do produto' },
+          { key: 'ver_lucro', label: 'Ver lucro do produto' }
         ]
       },
       {
@@ -73,9 +79,12 @@
         label: 'Relatórios',
         subtitle: 'Leitura gerencial e acompanhamento',
         actions: [
-          { key: 'ver_relatorios', label: 'Ver relatórios gerais' },
-          { key: 'ver_financeiro', label: 'Ver relatórios financeiros' },
-          { key: 'exportar', label: 'Exportar relatórios' }
+          { key: 'ver_lucro', label: 'Ver lucro nos relatórios' },
+          { key: 'ver_custo', label: 'Ver custo nos relatórios' },
+          { key: 'ver_contas_pagar', label: 'Ver e operar contas a pagar' },
+          { key: 'exportar', label: 'Exportar relatórios' },
+          { key: 'auditoria', label: 'Ver auditoria' },
+          { key: 'limpar_auditoria', label: 'Limpar auditoria' }
         ]
       }
     ];

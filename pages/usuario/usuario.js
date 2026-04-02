@@ -577,15 +577,51 @@ ${renderCreateMembershipModal(
       });
     }
 
-    if (btnPrimeiro) {
-      btnPrimeiro.addEventListener('click', () => {
-        alert('Envio de 1º acesso vamos ligar na próxima etapa.');
+        if (btnPrimeiro) {
+      btnPrimeiro.addEventListener('click', async () => {
+        try {
+          const email = String(user.email || '').trim().toLowerCase();
+          if (!email) {
+            throw new Error('Este usuário não possui e-mail cadastrado.');
+          }
+
+          const redirectTo = `${window.DevConfig.portalAppUrl}#/first-access`;
+          const actionLink = await DevAPI.generateFirstAccessLink(email, redirectTo);
+
+          try {
+            await navigator.clipboard.writeText(actionLink);
+            alert('Link de 1º acesso gerado e copiado para a área de transferência.');
+          } catch (_) {
+            prompt('Copie o link de 1º acesso abaixo:', actionLink);
+          }
+        } catch (error) {
+          console.error(error);
+          alert(error.message || 'Erro ao gerar link de 1º acesso.');
+        }
       });
     }
 
     if (btnSenha) {
-      btnSenha.addEventListener('click', () => {
-        alert('Envio de troca de senha vamos ligar na próxima etapa.');
+      btnSenha.addEventListener('click', async () => {
+        try {
+          const email = String(user.email || '').trim().toLowerCase();
+          if (!email) {
+            throw new Error('Este usuário não possui e-mail cadastrado.');
+          }
+
+          const redirectTo = `${window.DevConfig.portalAppUrl}#/reset`;
+          const actionLink = await DevAPI.generatePasswordResetLink(email, redirectTo);
+
+          try {
+            await navigator.clipboard.writeText(actionLink);
+            alert('Link de troca de senha gerado e copiado para a área de transferência.');
+          } catch (_) {
+            prompt('Copie o link de troca de senha abaixo:', actionLink);
+          }
+        } catch (error) {
+          console.error(error);
+          alert(error.message || 'Erro ao gerar link de troca de senha.');
+        }
       });
     }
 

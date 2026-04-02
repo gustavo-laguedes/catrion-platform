@@ -228,13 +228,18 @@ function renderEditEnvironmentModal(moduleData) {
       </div>
 
       <div class="panel-body module-actions-inline">
-        <button class="btn-warning" type="button">
-          Gerar backup
-        </button>
+        <button class="btn-warning" type="button" id="btnBackupModulo">
+  Gerar backup
+</button>
 
-        <button class="btn-danger" type="button">
-          Resetar módulo
-        </button>
+<button class="btn-danger" type="button" id="btnResetModulo">
+  Resetar módulo
+</button>
+
+      <button class="btn" type="button" id="btnRestoreModulo">
+  Restaurar backup
+</button>
+      
       </div>
     </article>
 
@@ -358,6 +363,113 @@ function bindModuleModals() {
 
 }
 
+function bindModuleActions(tenantId, moduleKey) {
+  const btnBackup = document.getElementById("btnBackupModulo");
+  const btnReset = document.getElementById("btnResetModulo");
+  const btnRestore = document.getElementById("btnRestoreModulo");
+
+  // ======================
+  // BACKUP
+  // ======================
+  if (btnBackup) {
+    btnBackup.addEventListener("click", async () => {
+      try {
+        btnBackup.disabled = true;
+
+        const result = await DevAPI.backupTenantData(tenantId, moduleKey);
+
+        const blob = new Blob(
+          [JSON.stringify(result.backup, null, 2)],
+          { type: "application/json" }
+        );
+
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+
+        a.href = url;
+        a.download = `backup_${tenantId}_${Date.now()}.json`;
+        a.click();
+
+        URL.revokeObjectURL(url);
+
+        alert("Backup gerado com sucesso.");
+      } catch (err) {
+        console.error(err);
+        alert("Erro ao gerar backup.");
+      } finally {
+        btnBackup.disabled = false;
+      }
+    });
+  }
+
+  // ======================
+  // RESET
+  // ======================
+  if (btnReset) {
+    btnReset.addEventListener("click", async () => {
+      const confirm1 = confirm("⚠ Isso vai apagar TODOS os dados do sistema.");
+      if (!confirm1) return;
+
+      const confirm2 = prompt("Digite RESET para confirmar:");
+      if (confirm2 !== "RESET") return;
+
+      try {
+        btnReset.disabled = true;
+
+        await DevAPI.resetTenantData(tenantId);
+
+        alert("Sistema resetado com sucesso.");
+        location.reload();
+      } catch (err) {
+        console.error(err);
+        alert("Erro ao resetar sistema.");
+      } finally {
+        btnReset.disabled = false;
+      }
+    });
+  }
+
+  // ======================
+  // RESTORE (NOVO)
+  // ======================
+  if (btnRestore) {
+    btnRestore.addEventListener("click", async () => {
+
+      const input = document.createElement("input");
+      input.type = "file";
+      input.accept = "application/json";
+
+      input.onchange = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        try {
+          const text = await file.text();
+          const backup = JSON.parse(text);
+
+          const confirm1 = confirm("⚠ Isso vai SOBRESCREVER os dados atuais.");
+          if (!confirm1) return;
+
+          btnRestore.disabled = true;
+
+          await DevAPI.restoreTenantData(tenantId, backup);
+
+          alert("Backup restaurado com sucesso.");
+          location.reload();
+
+        } catch (err) {
+          console.error(err);
+          alert("Erro ao restaurar backup.");
+        } finally {
+          btnRestore.disabled = false;
+        }
+      };
+
+      input.click();
+    });
+  }
+}
+
   async function hydrate(tenantId, moduleKey) {
     const mount = document.getElementById('empresaModuloMount');
     if (!mount) return;
@@ -398,6 +510,7 @@ function bindModuleModals() {
       window.DevState?.set('tenantModuleUsers', users);
 mount.innerHTML = renderPage(tenant, moduleData, users, logs);
 bindModuleModals();
+bindModuleActions(tenantId, moduleKey);
     } catch (error) {
       console.error(error);
       mount.innerHTML = `
