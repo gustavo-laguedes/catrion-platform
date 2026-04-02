@@ -158,53 +158,56 @@ window.DevAPI = (() => {
     return true;
   }
 
-  async function generatePasswordResetLink(email, redirectTo) {
-    ensureClient();
+  async function sendPasswordResetEmail(email, redirectTo) {
+  ensureClient();
 
-    const normalizedEmail = String(email || '').trim().toLowerCase();
-    const normalizedRedirectTo = String(redirectTo || '').trim();
+  const normalizedEmail = String(email || '').trim().toLowerCase();
+  const normalizedRedirectTo = String(redirectTo || '').trim();
 
-    if (!normalizedEmail) {
-      throw new Error('E-mail obrigatório para gerar reset.');
-    }
-
-    if (!normalizedRedirectTo) {
-      throw new Error('redirectTo obrigatório para gerar reset.');
-    }
-
-    const {
-      data: sessionData,
-      error: sessionError
-    } = await client.auth.getSession();
-
-    if (sessionError) {
-      throw sessionError;
-    }
-
-    const accessToken = sessionData?.session?.access_token || '';
-
-    if (!accessToken) {
-      throw new Error('Sessão autenticada não encontrada para chamar a Edge Function.');
-    }
-
-    const { data, error } = await client.functions.invoke('generate-password-reset-link', {
-      body: {
-        email: normalizedEmail,
-        redirectTo: normalizedRedirectTo
-      },
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        apikey: window.DevConfig.supabasePublishableKey
-      }
-    });
-
-    if (error) throw error;
-    if (!data?.success || !data?.actionLink) {
-      throw new Error(data?.error || 'Falha ao gerar link de reset.');
-    }
-
-    return data.actionLink;
+  if (!normalizedEmail) {
+    throw new Error('E-mail obrigatório para enviar reset.');
   }
+
+  if (!normalizedRedirectTo) {
+    throw new Error('redirectTo obrigatório para enviar reset.');
+  }
+
+  const {
+    data: sessionData,
+    error: sessionError
+  } = await client.auth.getSession();
+
+  if (sessionError) {
+    throw sessionError;
+  }
+
+  const accessToken = sessionData?.session?.access_token || '';
+
+  if (!accessToken) {
+    throw new Error('Sessão autenticada não encontrada para chamar a Edge Function.');
+  }
+
+  const { data, error } = await client.functions.invoke('generate-password-reset-link', {
+    body: {
+      email: normalizedEmail,
+      redirectTo: normalizedRedirectTo
+    },
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      apikey: window.DevConfig.supabasePublishableKey
+    }
+  });
+
+  if (error) {
+    throw error;
+  }
+
+  if (!data?.success) {
+    throw new Error(data?.error || 'Falha ao enviar e-mail de troca de senha.');
+  }
+
+  return data.message || 'E-mail de troca de senha enviado com sucesso.';
+}
 
   function mapTenant(base, contract, moduleRows) {
     const nome = base.trade_name || base.legal_name;
@@ -1629,7 +1632,7 @@ async function restoreTenantData(tenantId, backup) {
         createUserMembershipLink,
     updateAuthUserPasswordViaFunction,
     updateAuthUserEmailViaFunction,
-    generatePasswordResetLink,
+    sendPasswordResetEmail,
         uploadUserAvatar,
     deleteUserAvatarByUrl,
     deleteUserMembership,
