@@ -442,7 +442,7 @@
             </div>
 
               <button class="btn-ghost action-wide" type="button" id="btnResetSenhaPlaceholder">
-                Enviar troca de senha
+                Enviar link para definir senha
               </button>
             </div>
           </article>
